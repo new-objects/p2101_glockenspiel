@@ -1,0 +1,44 @@
+{
+  "name": "glockenspiel",
+  "private": true,
+  "version": "0.0.4",
+  "type": "module",
+  "scripts": {
+    "dev": "node vite-dev.js",
+    "dev:host": "vite --host",
+    "build": "vite build",
+    "build:gh-pages": "cross-env DEPLOY_ENV=gh-pages vite build",
+    "preview": "npm run build && vite preview",
+    "lint": "npx eslint src",
+    "lint:fix": "npm run lint -- --fix",
+    "prettier": "npx prettier src --check",
+    "prettier:fix": "npm run prettier -- --write",
+    "format": "npm run prettier:fix && npm run lint:fix",
+    "gh-deploy": "npm run build:gh-pages && gh-pages -d dist"
+  },
+  "devDependencies": {
+    "@new-objects/eslint-config": "^0.0.3",
+    "@new-objects/prettier-config": "^0.0.2",
+    "autoprefixer": "^10.4.16",
+    "colors": "^1.4.0",
+    "cross-env": "^7.0.3",
+    "gh-pages": "^6.0.0",
+    "husky": "^8.0.0",
+    "postcss": "^8.4.31",
+    "qrcode": "^1.5.3",
+    "tailwindcss": "^3.3.3",
+    "tunnelmole": "^2.2.9",
+    "vite": "^5.0.0",
+    "vite-plugin-eslint": "^1.8.1"
+  },
+  "dependencies": {
+    "phaser": "^3.60.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/new-objects/glockenspiel"
+  },
+  "bugs": {
+    "url": "https://github.com/new-objects/glockenspiel/issues"
+  }
+}
