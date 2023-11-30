@@ -32,6 +32,7 @@
     "vite-plugin-eslint": "^1.8.1"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.8",
     "phaser": "^3.60.0"
   },
   "repository": {
