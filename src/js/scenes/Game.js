@@ -19,9 +19,14 @@ export default class Game extends Phaser.Scene {
     this.load.image('rope', 'assets/Seil_einzeln2.png');
     this.load.image('handLeft', 'assets/bird.png');
     this.load.image('handRight', 'assets/bird.png');
+    this.load.audio('churchBell', 'assets/church-bell.mp3');
   }
 
   create() {
+    this.churchBellFX = this.sound.add('churchBell', {
+      loop: false,
+      volume: 0.5,
+    });
     this.add.image(400, 300, 'bg').setScale(0.5);
 
     // create a group of ropes
@@ -46,11 +51,13 @@ export default class Game extends Phaser.Scene {
     this.rightHandSprite = this.physics.add.sprite(500, 300, 'handRight');
 
     // add collision between hands and ropes
-    this.physics.add.collider(this.leftHandSprite, this.ropes, () => {
-      console.log('hand and rope collision');
+    this.physics.add.collider(this.leftHandSprite, this.ropes, (_, rope) => {
+      this.leftHandCollides = true;
+      this.lastLeftHandRope = rope; // Store the collided rope
     });
-    this.physics.add.collider(this.rightHandSprite, this.ropes, () => {
-      console.log('hand and rope collision');
+    this.physics.add.collider(this.rightHandSprite, this.ropes, (_, rope) => {
+      this.rightHandCollides = true;
+      this.lastRightHandRope = rope; // Store the collided rope
     });
   }
 
@@ -61,13 +68,57 @@ export default class Game extends Phaser.Scene {
     /** @type {import('@mediapipe/tasks-vision').GestureRecognizerResult} */
     const trackedHandsMediapipe = this.handTracking.getResult().result;
 
-    this.trackedHands = this.#parse(trackedHandsMediapipe);
+    // map mediapipe results to game coordinates
+    this.trackedHands = this.calculateCoordinates(trackedHandsMediapipe);
 
-    // update hand positions
+    // update hands
     const { handLeft: leftHandTracked, handRight: rightHandTracked } =
       this.trackedHands ?? {};
     this.updateHandPosition(this.leftHandSprite, leftHandTracked);
     this.updateHandPosition(this.rightHandSprite, rightHandTracked);
+
+    if (
+      leftHandTracked &&
+      leftHandTracked.gesture &&
+      leftHandTracked.gesture === 'Closed_Fist' &&
+      this.leftHandCollides
+    ) {
+      console.log('left hand gesture', leftHandTracked.gesture);
+
+      this.lastLeftHandRope.setY(this.leftHandSprite.y - 200);
+      this.rightHandCollides = false;
+      this.churchBellFX.play();
+
+      this.tweens.add({
+        targets: this.lastLeftHandRope,
+        x: this.lastLeftHandRope.x,
+        y: 20,
+        delay: 1500, // Delay of 5 seconds
+        duration: 1000, // Duration of the animation, e.g., 1 second
+        ease: 'Power2', // Easing function for the animation
+      });
+    }
+
+    if (
+      rightHandTracked &&
+      rightHandTracked.gesture &&
+      rightHandTracked.gesture === 'Closed_Fist' &&
+      this.rightHandCollides
+    ) {
+      console.log('right hand gesture', rightHandTracked.gesture);
+      this.lastRightHandRope.setY(this.rightHandSprite.y - 200);
+      this.rightHandCollides = false;
+      this.churchBellFX.play();
+
+      this.tweens.add({
+        targets: this.lastRightHandRope,
+        x: this.lastRightHandRope.x,
+        y: 20,
+        delay: 1500, // Delay of 5 seconds
+        duration: 1000, // Duration of the animation, e.g., 1 second
+        ease: 'Power2', // Easing function for the animation
+      });
+    }
   }
 
   updateHandPosition(hand, handData) {
@@ -79,7 +130,7 @@ export default class Game extends Phaser.Scene {
     hand.body.reset(x, y);
   }
 
-  #parse(modelData) {
+  calculateCoordinates(modelData) {
     const hands = {};
     if (modelData && modelData.landmarks && modelData.landmarks.length > 0) {
       const { width } = this.game.config;
@@ -88,9 +139,11 @@ export default class Game extends Phaser.Scene {
         const handName =
           hand[0].categoryName === 'Left' ? 'handLeft' : 'handRight'; // left or right
         const { x, y } = modelData.landmarks[index][8];
+        const gesture = modelData.gestures[index][0].categoryName;
         hands[handName] = {
           x: width - x * width || 0,
           y: y * width || 0,
+          gesture,
         };
       });
     }
