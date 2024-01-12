@@ -16,6 +16,10 @@ export default class Game extends Phaser.Scene {
 
   preload() {
     this.load.image('bg', 'assets/Glockenspiel_BG.jpg');
+    this.load.spritesheet('fullscreen', 'assets/fullscreen.png', {
+      frameWidth: 64,
+      frameHeight: 64,
+    });
     this.load.image('rope', 'assets/Seil_einzeln2.png');
     this.load.image('handLeft', 'assets/bird.png');
     this.load.image('handRight', 'assets/bird.png');
@@ -59,6 +63,27 @@ export default class Game extends Phaser.Scene {
       this.rightHandCollides = true;
       this.lastRightHandRope = rope; // Store the collided rope
     });
+
+    const button = this.add
+      .image(800 - 16, 16, 'fullscreen', 0)
+      .setOrigin(1, 0)
+      .setInteractive();
+
+    button.on(
+      'pointerup',
+      function () {
+        if (this.scale.isFullscreen) {
+          button.setFrame(0);
+
+          this.scale.stopFullscreen();
+        } else {
+          button.setFrame(1);
+
+          this.scale.startFullscreen();
+        }
+      },
+      this,
+    );
   }
 
   update(_, delta) {
