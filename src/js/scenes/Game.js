@@ -49,10 +49,20 @@ export default class Game extends Phaser.Scene {
     }
 
     // left hand
-    this.leftHandSprite = this.physics.add.sprite(250, 300, 'handLeft');
-    this.leftHandSprite.setTint(0xff0000);
+    this.leftHandSprite = this.add.circle(800 * 0.5, 600 * 0.5, 20, 0xe4bfc8);
+    this.leftHandSprite.setStrokeStyle(6, 0xe4bfc8);
+
+    this.physics.add.existing(this.leftHandSprite);
     // right hand
-    this.rightHandSprite = this.physics.add.sprite(500, 300, 'handRight');
+    this.rightHandSprite = this.add.circle(
+      800 * 0.5 + 100,
+      600 * 0.5,
+      20,
+      0xe4bfc8,
+    );
+    this.rightHandSprite.setStrokeStyle(6, 0xe4bfc8);
+
+    this.physics.add.existing(this.rightHandSprite);
 
     // add collision between hands and ropes
     this.physics.add.collider(this.leftHandSprite, this.ropes, (_, rope) => {
