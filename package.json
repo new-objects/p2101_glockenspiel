@@ -1,7 +1,7 @@
 {
   "name": "p2101_glockenspiel",
   "private": true,
-  "version": "0.0.4",
+  "version": "0.0.5",
   "type": "module",
   "scripts": {
     "dev": "node vite-dev.js",

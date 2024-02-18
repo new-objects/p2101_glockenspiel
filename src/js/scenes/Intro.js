@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { HandTracking, webcamGui } from '@new-objects/libs';
+import packageJson from '../../../package.json';
 
 export class Intro extends Phaser.Scene {
   constructor() {
@@ -10,6 +11,7 @@ export class Intro extends Phaser.Scene {
       right: {},
     };
     this._rects = { left: null, right: null };
+    this._version = packageJson.version;
   }
 
   preload() {
@@ -19,6 +21,7 @@ export class Intro extends Phaser.Scene {
       frameWidth: 64,
       frameHeight: 64,
     });
+    this.load.image('nextCtrl', 'assets/next.png');
 
     const { width, height } = this.sys.game.canvas;
     this._width = width;
@@ -26,6 +29,12 @@ export class Intro extends Phaser.Scene {
   }
 
   create() {
+    // Create a Text Game Object to display the version number
+    this.add.text(10, 10, 'Version: ' + this._version, {
+      fontFamily: 'Arial',
+      fontSize: 24,
+      color: '#ffffff',
+    });
     // switch scenes
     this.input.keyboard.once(
       'keydown-SPACE',
@@ -77,25 +86,27 @@ export class Intro extends Phaser.Scene {
 
     // overlap of hands and ropes
     // this.physics.add.overlap(this.sprite, this.healthGroup, this.spriteHitHealth, null, this);
-    this.physics.add.overlap(
-      this._hands.left,
-      this._rects.left,
-      this.handleCollision,
-      null,
-      this,
-    );
-    this.physics.add.overlap(
-      this._hands.right,
-      this._rects.right,
-      this.handleCollision,
-      null,
-      this,
-    );
+    this.physics.add.overlap(this._hands.left, this._rects.left);
+    this.physics.add.overlap(this._hands.right, this._rects.right);
+
+    this.nextBtn = this.add
+      .image(this._width - 96, this._height - 16, 'nextCtrl', 0)
+      .setOrigin(1)
+      .setScale(0.05);
 
     this.fullscreenBtn = this.add
       .image(this._width - 16, this._height - 16, 'fullscreenCtrl', 0)
       .setOrigin(1, 1)
       .setInteractive();
+
+    this.nextBtn.on(
+      'pointerup',
+      () => {
+        console.log('----');
+        this.scene.start('Glockenspiel');
+      },
+      this,
+    );
 
     this.fullscreenBtn.on(
       'pointerup',
@@ -139,9 +150,6 @@ export class Intro extends Phaser.Scene {
       webcamOptions: { video: { width: this._width, height: this._height } },
     }).then(tracker => {
       this._handTracking = tracker;
-
-      // register gesture handler
-      // this._handTracking.on('gestureDetected', this.handleGesture.bind(this));
 
       // register resize action
       this.scale.on('resize', this.handleResize, this);
@@ -192,12 +200,6 @@ export class Intro extends Phaser.Scene {
 
     // update cameras view
     this.cameras.resize(this._width, this._height);
-  }
-
-  handleCollision(hand, line) {
-    // select the right hand with the name property of the sprite
-    const selectedHand = this._hands[hand.name];
-    const selectedRect = this._rects[hand.name];
   }
 }
 
