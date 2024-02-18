@@ -1,7 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+#game {
+  position: relative;
+}
+
+canvas {
+  position: absolute;
+  /* opacity: 0.4; */
+  top: 0;
+  left: 0;
+  z-index: 20;
+}
 
 video#webcam {
-  display: none;
+  position: absolute;
+  width: 100%;
+  top: 0px;
+  left: 0px;
+  z-index: 10;
+  transform: scaleX(-1);
 }

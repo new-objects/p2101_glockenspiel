@@ -1,188 +1,342 @@
 import Phaser from 'phaser';
-import app from '../index';
-import HandTracking from './game/HandTracking';
+import { HandTracking, mergeObjects } from '@new-objects/libs';
+import GUI from 'lil-gui';
 
-export default class Game extends Phaser.Scene {
-  totalTime = 0;
-  // init mediapipe hand tracking
-  numHands = 2;
-  handTracking = new HandTracking({ hands: this.numHands });
-  height = app.config.height;
-  width = app.config.width;
-  level = 3;
+export class Glockenspiel extends Phaser.Scene {
+  ROPES_TOTAL = 5;
+
   constructor() {
-    super('game');
+    super('Glockenspiel');
+    this._handTracking = null;
+    this._hands = {
+      left: {},
+      right: {},
+    };
   }
 
   preload() {
-    this.load.image('bg', 'assets/Glockenspiel_BG.jpg');
-    this.load.spritesheet('fullscreen', 'assets/fullscreen.png', {
+    this.load.image('background', 'assets/Glockenspiel_BG.jpg');
+    this.load.spritesheet('fullscreenCtrl', 'assets/fullscreen.png', {
       frameWidth: 64,
       frameHeight: 64,
     });
-    this.load.image('rope', 'assets/Seil_einzeln2.png');
-    this.load.image('handLeft', 'assets/bird.png');
-    this.load.image('handRight', 'assets/bird.png');
+    this.load.image('rope', 'assets/Seil_Griff.png');
+    this.load.image('hand', 'assets/bird.png');
+
+    // audio
     this.load.audio('churchBell', 'assets/church-bell.mp3');
+
+    this.load.audio('bell1', 'assets/bell_1.mp3');
+    this.load.audio('bell2', 'assets/bell_2.mp3');
+    this.load.audio('bell3', 'assets/bell_3.mp3');
+    this.load.audio('bell4', 'assets/bell_4.mp3');
+    this.load.audio('bell5', 'assets/bell_5.mp3');
+
+    const { width, height } = this.sys.game.canvas;
+    this._width = width;
+    this._height = height;
   }
 
   create() {
-    this.churchBellFX = this.sound.add('churchBell', {
+    // switch scenes
+    this.input.keyboard.once(
+      'keydown-SPACE',
+      () => {
+        this.scene.start('Intro');
+      },
+      this,
+    );
+    this.churchBell = this.sound.add('churchBell', {
       loop: false,
       volume: 0.5,
     });
-    this.add.image(400, 300, 'bg').setScale(0.5);
+    const bell1 = this.sound.add('bell1', { loop: false, volume: 0.5 });
+    const bell2 = this.sound.add('bell2', { loop: false, volume: 0.5 });
+    const bell3 = this.sound.add('bell3', { loop: false, volume: 0.5 });
+    const bell4 = this.sound.add('bell4', { loop: false, volume: 0.5 });
+    const bell5 = this.sound.add('bell5', { loop: false, volume: 0.5 });
 
-    // create a group of ropes
-    this.ropes = this.physics.add.staticGroup();
+    this.bells = [bell1, bell2, bell3, bell4, bell5];
 
-    for (let i = 0; i < this.level; ++i) {
-      // splits the width of the screen into equal parts
-      const x = (this.width / (this.level + 1)) * (i + 1);
-      const y = 20;
+    this.background = this.add
+      .image(0, 0, 'background')
+      .setOrigin(0)
+      .setDisplaySize(this._width, this._height);
 
-      /** @type {Phaser.Physics.Arcade.Sprite} */
-      const rope = this.ropes.create(x, y, 'rope').setScale(0.5);
-      /** @type {Phaser.Physics.Arcade.StaticBody} */
-      const body = rope.body;
-      body.updateFromGameObject();
-    }
+    this.createRopes();
 
     // left hand
-    this.leftHandSprite = this.add.circle(800 * 0.5, 600 * 0.5, 20, 0xe4bfc8);
-    this.leftHandSprite.setStrokeStyle(6, 0xe4bfc8);
-
-    this.physics.add.existing(this.leftHandSprite);
-    // right hand
-    this.rightHandSprite = this.add.circle(
-      800 * 0.5 + 100,
-      600 * 0.5,
+    this._hands.left = this.add.circle(
+      this._width * 0.5,
+      this._height * 0.5,
       20,
       0xe4bfc8,
     );
-    this.rightHandSprite.setStrokeStyle(6, 0xe4bfc8);
+    this._hands.left.name = 'left';
+    this._hands.left.setStrokeStyle(6, 0xe4bfc8);
+    this.physics.add.existing(this._hands.left);
 
-    this.physics.add.existing(this.rightHandSprite);
+    // right hand
+    this._hands.right = this.add.circle(
+      this._width * 0.6,
+      this._height * 0.5,
+      20,
+      0xe4bfc8,
+    );
+    this._hands.right.name = 'right';
+    this._hands.right.setStrokeStyle(6, 0xe4bfc8);
+    this.physics.add.existing(this._hands.right);
 
-    // add collision between hands and ropes
-    this.physics.add.collider(this.leftHandSprite, this.ropes, (_, rope) => {
-      this.leftHandCollides = true;
-      this.lastLeftHandRope = rope; // Store the collided rope
-    });
-    this.physics.add.collider(this.rightHandSprite, this.ropes, (_, rope) => {
-      this.rightHandCollides = true;
-      this.lastRightHandRope = rope; // Store the collided rope
-    });
+    // overlap of hands and ropes
+    // this.physics.add.overlap(this.sprite, this.healthGroup, this.spriteHitHealth, null, this);
+    this.physics.add.overlap(
+      this._hands.left,
+      this.ropes,
+      this.handleCollision,
+      null,
+      this,
+    );
+    this.physics.add.overlap(
+      this._hands.right,
+      this.ropes,
+      this.handleCollision,
+      null,
+      this,
+    );
 
-    const button = this.add
-      .image(800 - 16, 16, 'fullscreen', 0)
-      .setOrigin(1, 0)
+    this.fullscreenBtn = this.add
+      .image(this._width - 16, this._height - 16, 'fullscreenCtrl', 0)
+      .setOrigin(1, 1)
       .setInteractive();
 
-    button.on(
+    this.fullscreenBtn.on(
       'pointerup',
       function () {
         if (this.scale.isFullscreen) {
-          button.setFrame(0);
+          this.fullscreenBtn.setFrame(0);
 
           this.scale.stopFullscreen();
         } else {
-          button.setFrame(1);
+          this.fullscreenBtn.setFrame(1);
 
           this.scale.startFullscreen();
         }
       },
       this,
     );
+    /**
+     * Hand-Tracking
+     */
+
+    HandTracking.initialize({
+      hands: 2,
+      width: this._width,
+      height: this._height,
+      webcamOptions: { video: { width: this._width, height: this._height } },
+    }).then(tracker => {
+      this._handTracking = tracker;
+
+      // register gesture handler
+      this._handTracking.on('gestureDetected', this.handleGesture.bind(this));
+
+      // register resize action
+      this.scale.on('resize', this.handleResize, this);
+
+      // gui
+      // !!! - (debug) - replaced it with my local variant
+      webcamGui();
+    });
   }
 
-  update(_, delta) {
-    this.totalTime += delta;
+  update() {
+    if (!this._handTracking) return;
 
-    // get hand tracking results
-    /** @type {import('@mediapipe/tasks-vision').GestureRecognizerResult} */
-    const trackedHandsMediapipe = this.handTracking.getResult().result;
+    this._handTracking.getHands(this._width, this._height);
+  }
 
-    // map mediapipe results to game coordinates
-    this.trackedHands = this.calculateCoordinates(trackedHandsMediapipe);
+  createRopes() {
+    // create a group of ropes
+    this.ropes = this.physics.add.staticGroup();
 
-    // update hands
-    const { handLeft: leftHandTracked, handRight: rightHandTracked } =
-      this.trackedHands ?? {};
-    this.updateHandPosition(this.leftHandSprite, leftHandTracked);
-    this.updateHandPosition(this.rightHandSprite, rightHandTracked);
+    for (let i = 0; i < this.ROPES_TOTAL; ++i) {
+      // splits the width of the screen into equal parts
+      const x = (this._width / (this.ROPES_TOTAL + 1)) * (i + 1);
+      const y = Phaser.Math.Between(this._height * 0.2, this._height * -0.2);
 
-    if (
-      leftHandTracked &&
-      leftHandTracked.gesture &&
-      leftHandTracked.gesture === 'Closed_Fist' &&
-      this.leftHandCollides
-    ) {
-      console.log('left hand gesture', leftHandTracked.gesture);
+      const rope = this.ropes.create(x, y, 'rope').setScale(0.5);
+      rope.sample = this.bells[i];
+      rope.body.updateFromGameObject();
+    }
+  }
 
-      this.lastLeftHandRope.setY(this.leftHandSprite.y - 200);
-      this.rightHandCollides = false;
-      this.churchBellFX.play();
+  updateRopes(width, height) {
+    this.ropes.children.each((rope, idx) => {
+      rope.x = (width / (this.ROPES_TOTAL + 1)) * (idx + 1);
+      rope.y = Phaser.Math.Between(this._height * 0.2, this._height * -0.2);
+    });
+  }
 
+  handleResize(gameSize) {
+    if (!window.webcam) return;
+
+    this._width = gameSize.width;
+    this._height = gameSize.height;
+
+    // update background
+    this.background.setDisplaySize(this._width, this._height);
+
+    // update fullscreen btn
+    this.fullscreenBtn.x = this._width - 16;
+    this.fullscreenBtn.y = this._height - 16;
+
+    // update ropes' positions
+    this.updateRopes(this._width, this._height);
+
+    // update cameras view
+    this.cameras.resize(this._width, this._height);
+
+    window.webcam.changeOptions({
+      video: { width: this._width, height: this._height },
+    });
+  }
+
+  handleGesture(trackedHand) {
+    if (!trackedHand) return;
+
+    const selectedHand =
+      trackedHand.handName === 'handRight'
+        ? this._hands.right
+        : this._hands.left;
+
+    selectedHand.gesture = trackedHand.gesture;
+    selectedHand.setX(trackedHand.x);
+    selectedHand.setY(trackedHand.y);
+    selectedHand.body.reset(trackedHand.x, trackedHand.y);
+    // if (
+    //   leftHandTracked &&
+    //   leftHandTracked.gesture &&
+    //   leftHandTracked.gesture === 'Closed_Fist' &&
+    //   this.leftHandCollides
+    // ) {
+    //   console.log('left hand gesture', leftHandTracked.gesture);
+
+    //   this.lastLeftHandRope.setY(this.leftHandSprite.y - 200);
+    //   this.rightHandCollides = false;
+    //   this.churchBellFX.play();
+
+    //   this.tweens.add({
+    //     targets: this.lastLeftHandRope,
+    //     x: this.lastLeftHandRope.x,
+    //     y: 20,
+    //     delay: 1500, // Delay of 5 seconds
+    //     duration: 1000, // Duration of the animation, e.g., 1 second
+    //     ease: 'Power2', // Easing function for the animation
+    //   });
+    // }
+
+    // if (
+    //   rightHandTracked &&
+    //   rightHandTracked.gesture &&
+    //   rightHandTracked.gesture === 'Closed_Fist' &&
+    //   this.rightHandCollides
+    // ) {
+    //   console.log('right hand gesture', rightHandTracked.gesture);
+    //   this.lastRightHandRope.setY(this.rightHandSprite.y - 200);
+    //   this.rightHandCollides = false;
+    //   this.churchBellFX.play();
+
+    //   this.tweens.add({
+    //     targets: this.lastRightHandRope,
+    //     x: this.lastRightHandRope.x,
+    //     y: 20,
+    //     delay: 1500, // Delay of 5 seconds
+    //     duration: 1000, // Duration of the animation, e.g., 1 second
+    //     ease: 'Power2', // Easing function for the animation
+    //   });
+  }
+
+  handleCollision(hand, rope) {
+    console.log(hand.name, hand.x, hand.y);
+    // select the right hand with the name property of the sprite
+    const selectedHand = this._hands[hand.name];
+    if (selectedHand.gesture === 'Closed_Fist') {
+      rope.setY(hand.y);
+      rope.body.updateFromGameObject();
+      rope.sample.play();
       this.tweens.add({
-        targets: this.lastLeftHandRope,
-        x: this.lastLeftHandRope.x,
-        y: 20,
+        targets: rope,
+        x: rope.x,
+        y: this._height * 0.1,
         delay: 1500, // Delay of 5 seconds
         duration: 1000, // Duration of the animation, e.g., 1 second
         ease: 'Power2', // Easing function for the animation
       });
     }
-
-    if (
-      rightHandTracked &&
-      rightHandTracked.gesture &&
-      rightHandTracked.gesture === 'Closed_Fist' &&
-      this.rightHandCollides
-    ) {
-      console.log('right hand gesture', rightHandTracked.gesture);
-      this.lastRightHandRope.setY(this.rightHandSprite.y - 200);
-      this.rightHandCollides = false;
-      this.churchBellFX.play();
-
-      this.tweens.add({
-        targets: this.lastRightHandRope,
-        x: this.lastRightHandRope.x,
-        y: 20,
-        delay: 1500, // Delay of 5 seconds
-        duration: 1000, // Duration of the animation, e.g., 1 second
-        ease: 'Power2', // Easing function for the animation
-      });
-    }
-  }
-
-  updateHandPosition(hand, handData) {
-    if (!handData) return;
-
-    const { x, y } = handData;
-    hand.setX(x);
-    hand.setY(y);
-    hand.body.reset(x, y);
-  }
-
-  calculateCoordinates(modelData) {
-    const hands = {};
-    if (modelData && modelData.landmarks && modelData.landmarks.length > 0) {
-      const { width } = this.game.config;
-
-      modelData.handedness.forEach((hand, index) => {
-        const handName =
-          hand[0].categoryName === 'Left' ? 'handLeft' : 'handRight'; // left or right
-        const { x, y } = modelData.landmarks[index][8];
-        const gesture = modelData.gestures[index][0].categoryName;
-        hands[handName] = {
-          x: width - x * width || 0,
-          y: y * width || 0,
-          gesture,
-        };
-      });
-    }
-
-    return hands;
   }
 }
+
+const webcamGui = () => {
+  const resolution = {
+    '1080p': {
+      width: 1920,
+      height: 1080,
+    },
+    '720p': {
+      width: 1280,
+      height: 720,
+    },
+    '450p': {
+      width: 800,
+      height: 450,
+    },
+    '360p': {
+      width: 640,
+      height: 360,
+    },
+  };
+  const mediaStreamSettings = webcam.stream.getVideoTracks()[0].getSettings();
+  const canavasEl = document.querySelector('canvas');
+  const gui = new GUI();
+  const config = {
+    activeCamera: window.webcam.currentWebcam.label,
+    backCamera: async () => {
+      window.webcam.stop();
+      window.webcam.startBack();
+    },
+    frontCamera: async () => {
+      window.webcam.stop();
+      window.webcam.startFront();
+    },
+    width: mediaStreamSettings.width,
+    canvasOpacity: 1,
+  };
+
+  // switch active webcam
+  gui
+    .add(
+      config,
+      'activeCamera',
+      window.webcam.allWebcams.map(cam => cam.label),
+    )
+    .name('Select camera')
+    .onChange(value => window.webcam.changeByLabel(value));
+
+  gui.add(config, 'backCamera').name('Switch to rear camera');
+  gui.add(config, 'frontCamera').name('Switch to front camera');
+
+  gui.add(config, 'width', Object.keys(resolution)).onChange(value => {
+    const newOptions = mergeObjects(window.webcam.webcamOptions, {
+      video: {
+        width: resolution[value].width,
+        height: resolution[value].height,
+      },
+    });
+    window.webcam.changeOptions(newOptions);
+  });
+  gui
+    .add(config, 'canvasOpacity', 0, 1, 0.1)
+    .name('Canvas opacity')
+    .onChange(value => {
+      canavasEl.style.opacity = value;
+    });
+};

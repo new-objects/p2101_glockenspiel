@@ -1,21 +1,22 @@
 import '../css/style.css';
 
 import Phaser from 'phaser';
-import Game from './scenes/Game';
+import { Glockenspiel } from './scenes/Game';
+import { Intro } from './scenes/Intro';
 
 export default new Phaser.Game({
   type: Phaser.AUTO,
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 800,
-    height: 600,
-  },
   physics: {
     default: 'arcade',
     arcade: {
       debug: false,
     },
   },
-  scene: Game,
+  scale: {
+    mode: Phaser.Scale.RESIZE,
+    parent: 'game',
+    width: '100%',
+    height: '100%',
+  },
+  scene: [Intro, Glockenspiel],
 });
