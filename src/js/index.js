@@ -13,10 +13,10 @@ export default new Phaser.Game({
     },
   },
   scale: {
-    mode: Phaser.Scale.RESIZE,
+    mode: Phaser.Scale.FIT,
     parent: 'game',
-    width: '100%',
-    height: '100%',
+    width: 1280,
+    height: 720,
   },
   scene: [Intro, Glockenspiel],
 });

@@ -132,18 +132,6 @@ export class Intro extends Phaser.Scene {
     graphics.strokeLineShape(lineLeft);
     graphics.strokeLineShape(lineRight);
 
-    // register resize action
-    this.scale.on(
-      'resize',
-      gameSize => {
-        const width = gameSize.width;
-        const height = gameSize.height;
-
-        this.cameras.resize(width, height);
-      },
-      this,
-    );
-
     HandTracking.initialize({
       hands: 2,
       width: this._width,
@@ -153,13 +141,12 @@ export class Intro extends Phaser.Scene {
       this._handTracking = tracker;
 
       // register gesture handler
-      this._handTracking.on('gestureDetected', this.handleGesture.bind(this));
+      // this._handTracking.on('gestureDetected', this.handleGesture.bind(this));
 
       // register resize action
       this.scale.on('resize', this.handleResize, this);
 
       // gui
-      // !!! - (debug) - replaced it with my local variant
       webcamGui();
     });
   }
@@ -167,7 +154,34 @@ export class Intro extends Phaser.Scene {
   update() {
     if (!this._handTracking) return;
 
-    this._handTracking.getHands(this._width, this._height);
+    // gesture and collision
+    const results = this._handTracking.getHands(this._width, this._height);
+
+    if (results.detected) {
+      if (results.handLeft) {
+        this._hands.left.setX(results.handLeft.x);
+        this._hands.left.setY(results.handLeft.y);
+
+        if (results.handLeft.gesture === 'Closed_Fist') {
+          this._hands.left.fillColor = 0xffff00;
+          this._rects.left.setY(results.handLeft.y);
+        } else {
+          this._hands.left.fillColor = 0xe4bfc8;
+        }
+      }
+
+      if (results.handRight) {
+        this._hands.right.setX(results.handRight.x);
+        this._hands.right.setY(results.handRight.y);
+
+        if (results.handRight.gesture === 'Closed_Fist') {
+          this._hands.right.fillColor = 0xffff00;
+          this._rects.right.setY(results.handRight.y);
+        } else {
+          this._hands.right.fillColor = 0xe4bfc8;
+        }
+      }
+    }
   }
 
   handleResize(gameSize) {
@@ -176,43 +190,14 @@ export class Intro extends Phaser.Scene {
     this._width = gameSize.width;
     this._height = gameSize.height;
 
-    // update fullscreen btn
-    this.fullscreenBtn.x = this._width - 16;
-    this.fullscreenBtn.y = this._height - 16;
-
     // update cameras view
     this.cameras.resize(this._width, this._height);
-
-    window.webcam.changeOptions({
-      video: { width: this._width, height: this._height },
-    });
-  }
-
-  handleGesture(trackedHand) {
-    if (!trackedHand) return;
-
-    const selectedHand =
-      trackedHand.handName === 'handRight'
-        ? this._hands.right
-        : this._hands.left;
-
-    selectedHand.gesture = trackedHand.gesture;
-    selectedHand.setX(trackedHand.x);
-    selectedHand.setY(trackedHand.y);
-    selectedHand.body.reset(trackedHand.x, trackedHand.y);
   }
 
   handleCollision(hand, line) {
     // select the right hand with the name property of the sprite
     const selectedHand = this._hands[hand.name];
     const selectedRect = this._rects[hand.name];
-    if (selectedHand.gesture === 'Closed_Fist') {
-      hand.fillColor = 0xffff00;
-      selectedRect.y = selectedHand.y;
-      line.body.updateFromGameObject();
-    } else {
-      hand.fillColor = 0xe4bfc8;
-    }
   }
 }
 

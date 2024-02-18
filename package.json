@@ -1,5 +1,5 @@
 {
-  "name": "glockenspiel",
+  "name": "p2101_glockenspiel",
   "private": true,
   "version": "0.0.4",
   "type": "module",
@@ -38,9 +38,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/new-objects/glockenspiel"
+    "url": "git+https://github.com/new-objects/p2101_glockenspiel"
   },
   "bugs": {
-    "url": "https://github.com/new-objects/glockenspiel/issues"
+    "url": "https://github.com/new-objects/p2101_glockenspiel/issues"
   }
 }

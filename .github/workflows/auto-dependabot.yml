@@ -1,0 +1,33 @@
+name: Automerge dependabot PRs
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: 'PR number'
+        required: true
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'PLACEHOLDER'
+        run: echo "PLACEHOLDER for a future unit-test"
+
+  auto-merge:
+    name: 🤖 Automerge dependa[bot] PRs
+    needs: [unit-test]
+    if: ${{ github.actor == 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Merge PR from dependabot
+        uses: fastify/github-action-merge-dependabot@v3
+        with:
+          target: minor
+          pr-number: ${{ github.event.inputs.pr-number }}
