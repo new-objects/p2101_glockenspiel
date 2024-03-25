@@ -135,73 +135,40 @@ export class Glockenspiel extends Phaser.Scene {
 
     const results = this._handTracking.getHands(this._width, this._height);
     if (results.detected) {
-      if (results.handLeft) {
-        this._hands.left.setX(results.handLeft.x);
-        this._hands.left.setY(results.handLeft.y);
+      this.updateHand(results.handLeft, this._hands.left, 220);
+      this.updateHand(results.handRight, this._hands.right, 320);
+    }
+  }
 
-        if (results.handLeft.gesture === 'Closed_Fist') {
-          this._hands.left.fillColor = 0xffff00;
+  updateHand(trackedHand, handObject, targetY) {
+    if (trackedHand) {
+      handObject.setX(trackedHand.x);
+      handObject.setY(trackedHand.y);
 
-          const closestRope = this.selectClosestRope(
-            this._hands.left,
-            this.ropes,
-          );
-          closestRope.setY(results.handLeft.y);
+      if (trackedHand.gesture === 'Closed_Fist') {
+        handObject.fillColor = 0xffff00;
 
-          // only every 3 seconds a bell sound can be triggered
-          if (!this.audioIsPlaying) {
-            this.audioIsPlaying = true;
-            closestRope.sample.play();
-            setTimeout(() => {
-              this.audioIsPlaying = false;
-            }, 2000);
-            this.tweens.add({
-              targets: closestRope,
-              x: closestRope.x,
-              y: 220,
-              delay: 1500, // Delay of 5 seconds
-              duration: 1000, // Duration of the animation, e.g., 1 second
-              ease: 'Power2', // Easing function for the animation
-            });
-          }
-        } else {
-          this._hands.left.fillColor = 0xe4bfc8;
+        const closestRope = this.selectClosestRope(handObject, this.ropes);
+        closestRope.setY(trackedHand.y);
+
+        if (!this.audioIsPlaying) {
+          this.audioIsPlaying = true;
+          closestRope.sample.play();
+          setTimeout(() => {
+            this.audioIsPlaying = false;
+          }, 2000);
+
+          this.tweens.add({
+            targets: closestRope,
+            x: closestRope.x,
+            y: targetY,
+            delay: 1500,
+            duration: 1000,
+            ease: 'Power2',
+          });
         }
-      }
-
-      if (results.handRight) {
-        this._hands.right.setX(results.handRight.x);
-        this._hands.right.setY(results.handRight.y);
-
-        if (results.handRight.gesture === 'Closed_Fist') {
-          this._hands.right.fillColor = 0xffff00;
-
-          const closestRope = this.selectClosestRope(
-            this._hands.right,
-            this.ropes,
-          );
-          closestRope.setY(results.handRight.y);
-
-          // only every 3 seconds a bell sound can be triggered
-          if (!this.audioIsPlaying) {
-            this.audioIsPlaying = true;
-            closestRope.sample.play();
-            setTimeout(() => {
-              this.audioIsPlaying = false;
-            }, 2000);
-
-            this.tweens.add({
-              targets: closestRope,
-              x: closestRope.x,
-              y: 320,
-              delay: 1500, // Delay of 5 seconds
-              duration: 1000, // Duration of the animation, e.g., 1 second
-              ease: 'Power2', // Easing function for the animation
-            });
-          }
-        } else {
-          this._hands.right.fillColor = 0xe4bfc8;
-        }
+      } else {
+        handObject.fillColor = 0xe4bfc8;
       }
     }
   }
